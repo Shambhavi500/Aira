@@ -20,6 +20,7 @@ from app.models.recovery_case import RecoveryCase
 from app.models.audit_event import AuditEvent
 from app.models.checkout_session import CheckoutSession
 from app.models.promise_to_pay import PromiseToPay
+from app.models.intervention import Intervention
 
 
 fake = Faker("en_IN")
