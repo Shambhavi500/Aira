@@ -7,6 +7,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from typing import Optional
+from app.ai.provider import GeminiProvider, RealGeminiProvider, get_gemini_provider
 
 logger = logging.getLogger(__name__)
 
@@ -101,14 +102,22 @@ async def classify_recovery_signal(
     attempt_count: int = 0,
     extra_context: Optional[str] = None,
     gemini_api_key: str = "",
+    provider: Optional[GeminiProvider] = None,
 ) -> ClassificationResult:
     """
     Classify the root cause of a revenue risk event and recommend a recovery action.
-    Uses Gemini 1.5 Flash with structured JSON output.
-    Falls back to rule-based classification on any error.
+    Uses GeminiProvider with structured JSON output.
+    Falls back to deterministic rule-based classification on any error.
     """
-    if not gemini_api_key:
-        logger.info("No Gemini API key — using fallback classifier")
+    active_provider = provider or get_gemini_provider()
+
+    # If the active provider is RealGeminiProvider and has no api_key, set it from parameter if given
+    if isinstance(active_provider, RealGeminiProvider) and not active_provider.api_key and gemini_api_key:
+        active_provider = RealGeminiProvider(api_key=gemini_api_key)
+
+    # If active provider is RealGeminiProvider and has no API key, use fallback immediately
+    if isinstance(active_provider, RealGeminiProvider) and not active_provider.api_key:
+        logger.info("RealGeminiProvider requested but no API key configured — using fallback classifier")
         return _fallback_classify(failure_code or "", failure_reason or "", payment_method or "")
 
     prompt = f"""You are an expert fintech revenue recovery analyst for an Indian payment platform.
@@ -144,24 +153,17 @@ Rules:
 - Signals must be concrete observations from the data, not generic statements"""
 
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=gemini_api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
-
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.1,
-                max_output_tokens=512,
-            ),
-        )
-        text = response.text.strip()
+        raw_text = await active_provider.generate_content(prompt)
+        text = raw_text.strip()
 
         # Strip markdown code fences if present
         if text.startswith("```"):
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
+            parts = text.split("```")
+            if len(parts) >= 2:
+                text = parts[1]
+                if text.startswith("json"):
+                    text = text[4:]
+        text = text.strip()
 
         data = json.loads(text)
 
@@ -186,5 +188,5 @@ Rules:
         )
 
     except Exception as e:
-        logger.warning(f"Gemini classification failed: {e}. Using fallback.")
+        logger.warning(f"AI classification failed: {e}. Using fallback.")
         return _fallback_classify(failure_code or "", failure_reason or "", payment_method or "")

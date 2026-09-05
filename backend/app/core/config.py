@@ -5,6 +5,7 @@ from functools import lru_cache
 class Settings(BaseSettings):
     # AI
     gemini_api_key: str = ""
+    ai_provider: str = "mock"  # "mock" | "gemini" | "auto"
 
     # Razorpay
     razorpay_key_id: str = ""

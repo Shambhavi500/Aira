@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "typecheck": "tsc -b",
+    "test": "tsx src/tests/verify_flows.ts",
+    "validate:dataset": "tsx scripts/validate_datasets.ts",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -24,6 +27,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
     "oxlint": "^1.79.0",
+    "tsx": "^4.23.13",
     "typescript": "~6.0.2",
     "vite": "^8.2.2"
   }

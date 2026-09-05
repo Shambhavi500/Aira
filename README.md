@@ -1,4 +1,4 @@
-﻿<p align="center">
+<p align="center">
   <img src="frontend/public/aira-logo-full.png" alt="AIRA Revenue Recovery OS" width="460" />
 </p>
 
@@ -273,38 +273,75 @@ cd Aira
 
 ---
 
-## 🧪 Verification & Testing
+## 🧪 CI/CD & Local Verification
 
-### Backend Unit & Integration Tests
+AIRA provides a robust, reproducible CI/CD pipeline engineered to verify the complete project deterministically on every pull request and push to `main`.
 
-Run the complete backend test suite using Pytest:
+### 🛡️ Core CI Mandate: Deterministic & Keyless
 
-```bash
-cd backend
-$env:PYTHONPATH="."
-.\venv\Scripts\pytest -v
-```
+> **Normal CI does NOT require a live Gemini API key.**
 
-### Frontend Build & Flow Verification
+All AI-dependent recovery signal classification and root-cause analysis in normal CI utilize a deterministic mock provider (`MockGeminiProvider`). This guarantees **100% reproducible test outcomes** with zero network latency, zero flakiness, and zero external API dependencies.
 
-Verify TypeScript compilation, asset bundling, and zero-data compliance:
-
-```bash
-cd frontend
-# 1. Typecheck & production build
-npm run build
-
-# 2. Run end-to-end operational flow verification
-npx tsx src/tests/verify_flows.ts
-```
-
-All test suites validate:
-* Zero-data formatting rules (`formatINR()`, `formatPercent()`).
-* Single Source of Truth updates across overview metrics, cases, and dunning sequences.
-* Cross-module state synchronization on promise settlement.
-* Seamless offline client fallback routing.
+A live Gemini test job is supported as an **optional, isolated pipeline job** strictly gated behind the presence of the `GEMINI_API_KEY` repository secret (`secrets.GEMINI_API_KEY != ''`).
 
 ---
+
+### 🚀 Unified Local CI Runner (`npm run ci`)
+
+You can execute the exact equivalent of the full GitHub Actions CI pipeline locally with a single command from the repository root:
+
+```bash
+npm run ci
+```
+
+This sequentially executes all verification stages in offline mode:
+
+1. **Frontend Lint**: `npm --prefix frontend run lint` (`oxlint`)
+2. **Frontend Typecheck**: `npm --prefix frontend run typecheck` (`tsc -b`)
+3. **Unit & Contract Tests**:
+   - Backend contract & unit suite (`pytest` with deterministic mock Gemini)
+   - Frontend state machine & flow verification (`tsx verify_flows.ts`)
+4. **Dataset Validation**:
+   - Backend SQLite database schema & constraint validation (`validate_datasets.py`)
+   - Frontend in-memory seed dataset validation (`validate_datasets.ts`)
+5. **Backend Startup Verification**:
+   - Starts FastAPI application, verifies lifespan initialization, asserts `/health` HTTP 200, checks `/api/metrics`, and terminates cleanly (`verify_backend.py`)
+6. **Production Frontend Build**: `npm --prefix frontend run build` (`vite build`)
+
+---
+
+### 📋 Individual Verification Commands
+
+From the project root:
+
+| Command | Description | Environment |
+|---------|-------------|-------------|
+| `npm run ci` | Runs complete 6-stage CI verification locally | `AI_PROVIDER=mock` (Offline) |
+| `npm run lint` | Runs frontend code quality checks via `oxlint` | Local / CI |
+| `npm run typecheck` | Validates TypeScript types across frontend | Local / CI |
+| `npm test` | Runs both backend pytest and frontend verification tests | Offline / Keyless |
+| `npm run test:gemini` | Runs live Gemini contract tests (skips if key absent) | Requires `GEMINI_API_KEY` |
+| `npm run validate:dataset` | Validates backend SQLite DB and frontend seed datasets | Local / CI |
+| `npm run verify:backend` | Boots backend, probes `/health` & `/api/metrics`, exits | Local / CI |
+| `npm run build` | Compiles production-ready frontend bundle | Local / CI |
+
+---
+
+### 🤖 Live Gemini Integration Testing
+
+To run live integration tests against Google Gemini:
+
+```bash
+# Set your API key
+export GEMINI_API_KEY="your-actual-api-key"
+export AI_PROVIDER="gemini"
+
+# Run dedicated live Gemini test suite
+npm run test:gemini
+```
+
+If `GEMINI_API_KEY` is not present, the live test cleanly skips without failing.
 
 ## 📜 Indian Financial & Regulatory Compliance
 
