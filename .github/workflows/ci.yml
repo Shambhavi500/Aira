@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # AIRA Revenue Recovery OS — GitHub Actions CI Pipeline
 # Requirement #37: Full deterministic offline CI + optional live Gemini gate
 # ==============================================================================
@@ -143,19 +143,18 @@ jobs:
 # ---------------------------------------------------------------------------
 # Optional Live Gemini Job
 #
-# Gating strategy (avoids the unsupported "secrets" job-level if expression):
-#   1. Job only runs when workflow_dispatch is used AND run_live_gemini=true.
-#   2. A dedicated step checks whether GEMINI_API_KEY is non-empty via env.
-#   3. The test step is conditioned on that step's output.
-#   4. The secret is never printed, echoed, or exposed.
+# Gating: Only runs on explicit workflow_dispatch with run_live_gemini=true.
+# Secret is passed directly to step env (valid context for secrets).
+# The test itself calls pytest.skip() if GEMINI_API_KEY is empty.
+# No secrets context in job-level if. No boolean expression in ${{ }}.
 # ---------------------------------------------------------------------------
   live-gemini-tests:
     name: Optional - Live Gemini Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [ci]
-    # Gate 1: Only eligible on explicit manual dispatch with opt-in input.
-    # This is the only job-level condition — no secrets context used here.
+    # Only runs on explicit manual dispatch with the opt-in input set to true.
+    # Uses only github context — secrets context is NOT referenced here.
     if: >-
       github.event_name == 'workflow_dispatch' &&
       github.event.inputs.run_live_gemini == 'true'
@@ -177,36 +176,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Gate 2: Check secret availability via env var (step-level, supported).
-      # Sets an output flag that the test step reads.
-      # The secret value is never printed or logged.
-      - name: Check GEMINI_API_KEY secret availability
-        id: check_key
-        env:
-          KEY_PRESENT: ${{ secrets.GEMINI_API_KEY != '' }}
-        run: |
-          if [ "$KEY_PRESENT" = "true" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-            echo "GEMINI_API_KEY secret is configured. Live tests will run."
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "GEMINI_API_KEY secret is not configured. Live tests will be skipped."
-          fi
-
       - name: Run live Gemini integration tests
-        if: steps.check_key.outputs.available == 'true'
         working-directory: backend
         env:
           AI_PROVIDER: gemini
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ENVIRONMENT: testing
           PYTHONPATH: .
-        # Only execute tests marked @pytest.mark.live_gemini
+        # pytest.mark.live_gemini tests call pytest.skip() if GEMINI_API_KEY is
+        # absent — no external secret check step needed.
         run: pytest -v -m live_gemini
-
-      - name: Skip notice - GEMINI_API_KEY not configured
-        if: steps.check_key.outputs.available != 'true'
-        run: |
-          echo "Live Gemini tests were requested but GEMINI_API_KEY secret is not set."
-          echo "Configure the secret in Settings > Secrets and variables > Actions."
-          echo "Normal CI is not affected."
