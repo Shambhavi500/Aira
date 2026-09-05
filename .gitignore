@@ -1,4 +1,4 @@
-﻿# ============================================================
+# ============================================================
 # AIRA Revenue Recovery OS — Git Ignore Configuration
 # ============================================================
 
@@ -90,3 +90,6 @@ Thumbs.db
 *.sublime-workspace
 *.swp
 *.swo
+
+# Demo video project (large media files, renders, recordings)
+aira-demo-video/
