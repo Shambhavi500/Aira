@@ -1,368 +1,153 @@
-<p align="center">
-  <img src="frontend/public/aira-logo-full.png" alt="AIRA Revenue Recovery OS" width="460" />
-</p>
+# AIRA
 
-<h3 align="center">
-  Autonomous AI Revenue Recovery Operating System for the Indian Fintech Ecosystem
-</h3>
+AIRA (Autonomous Intelligent Recovery Agent) is an intelligent payment recovery and revenue operations system designed to mitigate transaction failures and optimize revenue retention. It combines real-time payment telemetry, deterministic policy enforcement, and AI-assisted root-cause analysis to autonomously orchestrate recovery workflows across payment degradation events, failed subscriptions, and outstanding receivables. 
 
-<p align="center">
-  <a href="#-key-features"><img src="https://img.shields.io/badge/Platform-Indian%20Fintech%20%26%20Banking-blue?style=for-the-badge&logo=razorpay" alt="Platform" /></a>
-  <a href="#-technology-stack"><img src="https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi" alt="FastAPI" /></a>
-  <a href="#-technology-stack"><img src="https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react" alt="React" /></a>
-  <a href="#-technology-stack"><img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript" alt="TypeScript" /></a>
-  <a href="#-regulatory-compliance"><img src="https://img.shields.io/badge/Compliance-RBI%20%7C%20NPCI-success?style=for-the-badge" alt="Compliance" /></a>
-  <a href="#-license"><img src="https://img.shields.io/badge/License-MIT-purple?style=for-the-badge" alt="License" /></a>
-</p>
+## Overview
 
----
+AIRA operates as an intelligent revenue operations layer. Payment degradation and transaction failures can occur for a multitude of reasons, ranging from gateway timeouts and mandate drop-offs to insufficient funds and customer abandonment. Traditional systems typically react to failed payments with generic, uniform retry schedules. AIRA instead focuses on identifying the underlying root cause of a failure to dynamically select the most appropriate recovery strategy. 
 
-## 📌 Executive Overview
+The system leverages a hybrid approach. It utilizes analytics and deterministic decision logic for core business rules and regulatory compliance, while employing AI-assisted reasoning to analyze complex failure signals and recommend optimal recovery actions. 
 
-In the Indian digital payments and subscription landscape, businesses lose up to **20% to 30%** of recurring transaction volume to involuntary churn, gateway corridor timeouts, mandate drop-offs, and delayed B2B settlements.
+The high-level operational flow of AIRA is as follows:
 
-**AIRA (Autonomous Intelligent Recovery Agent)** is a mission-critical Revenue Recovery Operating System engineered specifically for Indian fintech rails. Combining real-time payment telemetry, multi-channel dunning automation, algorithmic retry scheduling, and conversational voice AI, AIRA autonomously mitigates transaction failures while strictly adhering to Reserve Bank of India (RBI) regulations and NPCI guidelines.
+Payment and Business Data -> Data Validation -> Analytics and Detection -> Root Cause Analysis -> Recovery Decision -> Recovery Workflow -> Execution/Simulation -> Outcome Tracking.
 
-AIRA unifies the entire recovery lifecycle into an intuitive, high-velocity command surface designed with Razorpay's Blade design tokens and native tabular typography.
+*Note: In the current repository configuration, payment executions and recovery actions are simulated for demonstration and validation purposes.*
 
----
+## Problem Statement
 
-## ⚡ Core Pillars & Capabilities
+Businesses operating digital payments, recurring billing, and B2B receivables face significant revenue leakage due to unrecovered transactions. This leakage manifests across several scenarios:
 
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                             AIRA ENGINE                                  │
-├──────────────────────────────────────────────────────────────────────────┤
-│  ⚡ Autonomous Dunning  │  💳 Corridor Routing  │  🎙️ Multilingual Voice │
-│  📊 B2B Receivables & DSO│ 🔄 NPCI Mandate Engine│  🛡️ Cryptographic Ledger│
-└──────────────────────────────────────────────────────────────────────────┘
-```
+- **Payment Failures:** Hard and soft declines during active transactions.
+- **Payment Degradation:** Latency spikes or elevated error rates across specific payment corridors or gateways.
+- **Checkout Abandonment:** Customers dropping off during the payment flow.
+- **Failed Subscriptions:** Recurring billing attempts failing due to expired cards, insufficient funds, or mandate restrictions.
+- **B2B Receivables:** Delayed invoice settlements and extended Days Sales Outstanding (DSO).
+- **Mandate Failures:** Setup or execution failures of standing instructions or auto-debit mandates.
+- **Delayed Payments:** Customers failing to meet agreed-upon payment timelines.
 
-### 1. 💳 Payment Corridor Telemetry & Autonomous Failover
-* **Real-time Rail Monitoring**: Tracks throughput, error rates, and round-trip latency across major Indian payment corridors:
-  * **UPI**: HDFC UPI, ICICI UPI, SBI UPI, Axis UPI
-  * **Cards**: Razorpay Visa/MasterCard, RuPay
-  * **Netbanking**: HDFC, ICICI, SBI Netbanking
-  * **Recurring**: e-NACH NPCI Batch Clearing
-* **Autonomous Incident Detection**: Flags degraded corridors if latency exceeds 2,500ms or error rates exceed 15%.
-* **Self-Healing Routing**: Dynamically reroutes inflight payments away from congested banking rails to healthy backup corridors.
+A generic retry system is insufficient to address these challenges because different failure scenarios require fundamentally different recovery strategies. Retrying a card with insufficient funds requires a different approach (e.g., waiting for salary day) than retrying a payment that failed due to a temporary gateway timeout (which requires immediate routing to a fallback gateway). Furthermore, effective recovery requires intelligent customer communication and prioritization to maximize recovered revenue without creating poor user experiences.
 
-### 2. ⚡ Intelligent Subscription Dunning & Optimal Retries
-* **Liquidity-Aware Smart Retries**: Automatically models retry attempts around Indian salary credit cycles (1st to 5th of each month) and intraday banking clearing windows (10:00 AM – 2:00 PM).
-* **Multi-Tier Dunning Ladder**: Progressively transitions across gentle WhatsApp notifications, SMS payment alerts, and automated escalations.
+## Solution
 
-### 3. 📊 B2B Receivables & Days Sales Outstanding (DSO) Optimization
-* **Aging Bucket Analysis**: Categorizes enterprise accounts receivable into `0-30`, `31-60`, `61-90`, and `90+` days overdue.
-* **Dynamic DSO Computation**: Evaluates weighted collection periods:
-  $$\text{DSO} = \frac{\sum (\text{Overdue Days} \times \text{Balance})}{\sum \text{Total Balance}}$$
-* **1-Click Settlement Links**: Dispatches Razorpay Smart Payment Links with customizable grace periods and partial settlement options.
+AIRA addresses these challenges by decoupling the recovery process into distinct, specialized layers. This separation of concerns ensures that the system can adapt to diverse failure modes while maintaining strict adherence to business policies and regulatory requirements.
 
-### 4. 🤝 Promise-to-Pay (P2P) Tracking Ledger
-* **Omnichannel Commitment Capture**: Logs payment promises secured across voice, WhatsApp, email, or client portals.
-* **Automated Settlement Reconciliation**: Automatically synchronizes state across the ledger—marking commitments as `kept`, settling linked invoices as `paid`, and recovering cases in real time.
+The system is separated into the following components:
 
-### 5. 🔄 NPCI & RBI Compliant Mandate Sequencing
-* **Regulatory Guardrails**: Enforces the statutory 24-hour cooldown between subsequent mandate execution attempts per RBI guidelines.
-* **Pre-Debit WhatsApp Nudges**: Transmits mandatory pre-debit notifications to customer handsets prior to debit presentation.
-* **Adaptive Rail Sequencing**: Orchestrates cascading fallbacks from primary UPI Autopay to secondary card standing instructions and e-NACH.
+1. **Analytics:** Monitors payment telemetry, tracks corridor health, and aggregates financial metrics.
+2. **Root-Cause Detection:** Analyzes failure codes, customer context, and systemic signals to determine why a failure occurred.
+3. **Decisioning:** A deterministic policy governor that evaluates proposed actions against business rules, rate limits, and compliance requirements (e.g., cooling-off periods).
+4. **Recovery Workflow Orchestration:** Manages the state and progression of specific recovery cases based on the approved strategy.
+5. **AI Reasoning:** Analyzes complex signals to recommend the optimal recovery action when deterministic rules are insufficient.
+6. **Execution/Simulation:** Executes the approved recovery action or simulates the outcome for testing and demonstration.
+7. **Outcome Tracking:** Logs all interventions to a tamper-evident audit trail and updates case status based on the result.
 
-### 6. 🎙️ Multilingual Hinglish Voice AI Recovery
-* **Real-time Conversational Recovery**: Powered by generative conversational intelligence trained on colloquial Indian financial dialogues.
-* **Real-time Telemetry**: Features interactive live audio visualizers, sentiment analysis, and instantaneous in-call commitment logging.
+This architecture enables AIRA to transition from simply asking "what happened?" to "why did it happen?" and autonomously determining "what should happen next?"
 
-### 7. 🛡️ Cryptographic Tamper-Evident Audit Trail
-* **Immutable Decision Ledger**: Every autonomous routing choice, human operator intervention, and dunning action is immutably logged.
-* **SHA-256 Verification**: Generates tamper hashes for verifiable accounting and financial audit compliance.
+## Core Capabilities
 
-### 8. 🔄 Dual-Mode Architectural Resilience
-* **Full-Stack Execution**: Operates against an asynchronous FastAPI backend backed by SQLite / PostgreSQL.
-* **Zero-Friction Client Autonomy**: If the backend is offline, the frontend seamlessly engages an in-memory reactive data service (`dataService.ts`) with zero loss of interactive fidelity or metrics accuracy.
+AIRA implements several specialized recovery workflows to address distinct revenue leakage vectors.
 
----
+### Payment Degradation to Root Cause to Recovery Action
+The system ingests real-time payment telemetry to detect degraded performance across specific payment corridors. When latency or error rates exceed acceptable thresholds, AIRA identifies the likely systemic cause (e.g., gateway timeout) and recommends a recovery action, such as automatically rerouting inflight transactions to a healthy fallback corridor.
 
-## 🏗️ Architecture & Data Flow
+### Checkout Drop-off Recovery
+AIRA identifies instances of checkout abandonment by monitoring incomplete transaction sessions. The recovery workflow initiates targeted customer communication, such as dispatching a payment link with localized context, to re-engage the customer and recover the abandoned session.
+
+### Failed Subscription Recovery
+For recurring billing failures, AIRA analyzes the mandate status, retry history, and failure reason. It orchestrates a recovery sequence that may include liquidity-aware retries (e.g., timing retries around common salary credit dates) or transitioning to multi-channel dunning communications (e.g., SMS or WhatsApp reminders).
+
+### B2B Receivables Chaser
+The system monitors outstanding B2B invoices and categorizes them by aging buckets. It prioritizes accounts based on outstanding balance and risk, generating follow-up actions such as automated dispatch of settlement links or escalation for manual intervention.
+
+### Mandate Retry Sequencer
+Instead of blindly retrying failed auto-debit mandates, AIRA sequences retry attempts in compliance with regulatory cooling-off periods. It coordinates pre-debit notifications and adapts the retry strategy based on the specific mandate type and previous attempt outcomes.
+
+### Hinglish Voice Recovery
+AIRA includes capabilities for conversational customer engagement, utilizing AI-generated Hinglish communication to negotiate payment recovery. The generative AI is strictly constrained to communication generation and sentiment analysis, while the actual progression of the recovery workflow remains governed by deterministic logic.
+
+### Promise-to-Pay Tracker
+The system captures and monitors customer payment commitments (Promises-to-Pay) across various channels. It acts as a ledger to track whether commitments are kept, automatically updating invoice status and escalating broken promises to further recovery workflows.
+
+## How AIRA Works
+
+The end-to-end operation of AIRA follows a structured, ten-step pipeline:
+
+1. **Data Ingestion:** The system ingests payment events, subscription updates, and business data from external gateways and internal services.
+2. **Validation and Normalization:** Incoming data is validated against strict schemas (e.g., Pydantic models) and normalized into a standard internal format.
+3. **Metrics Calculation:** The analytics engine processes the normalized data to update real-time metrics, such as corridor latency and error rates.
+4. **Detection of Anomalies/Degradation:** Threshold monitors continuously evaluate metrics to detect anomalies or degraded performance that require intervention.
+5. **Root-Cause Analysis:** When an issue is detected, the system analyzes the available signals (failure codes, customer history) to determine the root cause. This step may utilize AI reasoning for complex or ambiguous signals.
+6. **Customer/Business Prioritization:** Recovery cases are prioritized based on the amount at risk, customer segment, and probability of recovery.
+7. **Recovery Strategy Selection:** A recovery strategy is formulated based on the identified root cause.
+8. **AI Reasoning or Communication Generation:** If the strategy requires customer engagement, AI may be used to generate contextual communication or analyze response sentiment.
+9. **Recovery Action Execution/Simulation:** The proposed strategy is evaluated by the deterministic Policy Governor. If approved, the action is executed (or simulated in the current repository state). Business-critical calculations and workflow decisions do not depend blindly on an LLM; they are strictly enforced by the Policy Governor.
+10. **Outcome Tracking:** The result of the intervention is recorded in an immutable audit ledger, and the case state is updated accordingly.
+
+## Architecture
+
+AIRA is built on a modern, decoupled architecture utilizing React, FastAPI, and asynchronous data processing.
+
+- **Frontend:** A React 19 application utilizing TypeScript and Vite. It features an operational command center built with specialized UI components for data visualization and state management. An in-memory reactive data service ensures UI fidelity even when the backend is offline.
+- **Backend/API:** A Python 3.11+ backend powered by FastAPI. It exposes RESTful routes for cases, invoices, metrics, and recovery operations.
+- **Data Layer:** Utilizes asynchronous SQLAlchemy with SQLite (or PostgreSQL) for persistent storage of cases, customers, mandates, and audit events.
+- **Analytics Layer:** Processes incoming telemetry to calculate real-time metrics and detect corridor degradation.
+- **Decision Engine:** The Policy Governor enforces deterministic business rules, rate limits, and regulatory constraints before any action is executed.
+- **Recovery Workflow Engine:** Orchestrates the step-by-step execution of specific recovery scenarios based on the case state.
+- **AI/Gemini Integration:** Leverages the Google Gemini API for root-cause classification and communication generation, acting as an advisory input to the deterministic engine.
+- **Validation:** Pydantic is used extensively for data validation and configuration management.
+- **Testing:** Comprehensive test suites using Pytest for the backend and TSX for frontend state verification. A mock AI provider ensures deterministic CI pipelines.
+- **Build/Deployment:** The repository includes scripts for database seeding, dataset validation, and local CI verification, facilitating easy deployment and testing.
 
 ```mermaid
-flowchart TD
-    subgraph Client ["AIRA Frontend (React 19 + TypeScript + Vite)"]
-        UI[Operational Command Center]
-        StateCtx[AiraStateContext]
-        DataBus[dataService Reactive Event Bus]
-        ApiClient[apiFetch Layer with Fallback Intercept]
-        UI --> StateCtx
-        StateCtx --> DataBus
-        UI --> ApiClient
-    end
+flowchart LR
+    A[Payment and Business Data] --> B[Validation]
+    B --> C[Analytics]
+    C --> D[Root Cause Analysis]
+    D --> E[Decision Engine]
+    E --> F[Recovery Workflows]
+    F --> G[Execution / Simulation]
+    G --> H[Outcome Tracking]
 
-    subgraph Backend ["AIRA Core Backend (FastAPI + Async SQLAlchemy)"]
-        API[FastAPI REST Router]
-        Policy[Policy Governor Engine]
-        RecoveryEngine[Autonomous Recovery Engine]
-        CorridorMonitor[Payment Rail Telemetry Monitor]
-        DB[(SQLite / PostgreSQL DB)]
-        
-        API --> Policy
-        API --> RecoveryEngine
-        API --> CorridorMonitor
-        RecoveryEngine --> DB
-        Policy --> DB
-        CorridorMonitor --> DB
-    end
-
-    subgraph Rails ["Indian Banking & Payment Rails"]
-        UPI[UPI Autopay (NPCI)]
-        Cards[Cards SI / RuPay / Visa / MC]
-        eNACH[e-NACH Batch Clearing]
-        Razorpay[Razorpay Gateway & Webhooks]
-    end
-
-    ApiClient -->|HTTP Fetch| API
-    ApiClient -.->|Offline Fallback| DataBus
-    RecoveryEngine --> Razorpay
-    CorridorMonitor --> UPI
-    CorridorMonitor --> Cards
-    CorridorMonitor --> eNACH
+    E --> I[AI Reasoning]
+    I --> E
 ```
 
----
-
-## 🛠️ Technology Stack
-
-| Domain | Technologies |
-| :--- | :--- |
-| **Frontend Framework** | React 19, TypeScript 5.x, Vite 8, React Router v7 |
-| **Design System & Styling**| Razorpay Blade Design Tokens, Tailwind CSS, Lucide Icons |
-| **Data Visualization** | Recharts, Custom SVG Audio Visualizers |
-| **Backend Framework** | Python 3.11+, FastAPI 0.115, Uvicorn |
-| **ORM & Database** | SQLAlchemy 2.0 (Async), aiosqlite, Alembic |
-| **Validation & Schema** | Pydantic v2, Pydantic Settings |
-| **AI & Telemetry** | Google Gemini API (`google-generativeai`), Faker |
-| **Payment Integration** | Razorpay Python SDK, Webhook HMAC Verification |
-| **Testing & Tooling** | Pytest, Pytest-Asyncio, Oxlint, TSX |
-
----
-
-## 📁 Repository Structure
-
-```
-Aira/
-├── backend/
-│   ├── app/
-│   │   ├── api/
-│   │   │   └── routes/          # REST route handlers (cases, invoices, metrics, etc.)
-│   │   ├── core/
-│   │   │   ├── config.py        # Pydantic environment settings
-│   │   │   └── database.py      # Async SQLAlchemy engine & session factory
-│   │   ├── models/              # SQLAlchemy database models
-│   │   ├── policy/              # RBI & rate-limiting policy governors
-│   │   ├── recovery/            # Recovery orchestrators & smart retry logic
-│   │   ├── seed/                # Realistic synthetic data generators
-│   │   ├── simulator/           # Payment corridor health & load simulator
-│   │   └── main.py              # FastAPI application bootstrap
-│   ├── tests/                   # Pytest test suite
-│   ├── enrich_db.py             # Realistic state & scenario enrichment script
-│   └── requirements.txt         # Backend Python dependencies
-│
-├── frontend/
-│   ├── public/                  # Brand assets, high-res logos, favicons
-│   ├── src/
-│   │   ├── api/                 # API client with transparent fallback interceptor
-│   │   ├── assets/              # Static media & vector graphics
-│   │   ├── assistant/           # In-app conversational co-pilot
-│   │   ├── components/          # Reusable Blade UI components (Command Palette, Drawers, etc.)
-│   │   ├── context/             # React Context for synchronized state
-│   │   ├── data/                # Deterministic seed datasets
-│   │   ├── pages/               # Primary operational dashboards & detail views
-│   │   ├── services/            # Authoritative reactive in-memory dataService
-│   │   ├── tests/               # System flow verification suite
-│   │   ├── utils/               # Indian numbering & zero-handling formatters
-│   │   ├── App.tsx              # Application root & routing
-│   │   └── index.css            # Blade color tokens & tabular typography
-│   └── package.json             # Frontend dependencies and scripts
-│
-├── .env.example                 # Environment variable template
-├── .gitignore                   # Comprehensive ignore rules
-├── BUG_AUDIT.md                 # 25-point comprehensive bug resolution matrix
-├── DATA_ARCHITECTURE.md         # Detailed data architecture & mathematical specs
-└── README.md                    # Project documentation
-```
-
----
-
-## 🚀 Getting Started
+## Setup and Installation
 
 ### Prerequisites
+- Node.js v18.0.0+ (v20+ recommended)
+- Python v3.11+
+- Git
 
-Ensure you have the following installed on your machine:
-* **Node.js**: v18.0.0 or later (v20+ recommended)
-* **Python**: v3.11 or later
-* **Git**: Installed and configured
+### Backend Setup
+1. Navigate to the `backend` directory.
+2. Create and activate a Python virtual environment.
+3. Install dependencies: `pip install -r requirements.txt`
+4. Copy `.env.example` to `.env` in the root directory.
+5. Generate and seed the database: `py enrich_db.py`
+6. Start the FastAPI server: `uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
 
----
+### Frontend Setup
+1. Navigate to the `frontend` directory.
+2. Install dependencies: `npm install`
+3. Start the development server: `npm run dev`
 
-### 1. Clone the Repository
+### Gemini AI Configuration
+The system uses a mock AI provider by default for deterministic behavior. To enable live AI reasoning:
+1. Obtain a Google Gemini API key.
+2. Set the `GEMINI_API_KEY` environment variable in your `.env` file.
+3. Set `AI_PROVIDER=gemini` in your `.env` file.
 
-```bash
-git clone https://github.com/Shambhavi500/Aira.git
-cd Aira
-```
+## Testing and Validation
+The project includes a robust local CI pipeline to validate datasets, verify architecture, and run test suites. 
 
----
-
-### 2. Backend Setup
-
-1. **Navigate to the backend directory and set up a virtual environment:**
-   ```bash
-   cd backend
-   python -m venv venv
-   ```
-
-2. **Activate the virtual environment:**
-   * **Windows (PowerShell):**
-     ```powershell
-     .\venv\Scripts\Activate.ps1
-     ```
-   * **macOS / Linux:**
-     ```bash
-     source venv/bin/activate
-     ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configure Environment Variables:**
-   Copy the example environment configuration from the project root:
-   ```bash
-   cp ../.env.example ../.env
-   ```
-   *(Optionally edit `.env` to configure your `GEMINI_API_KEY` or `RAZORPAY_KEY_ID`)*
-
-5. **Generate and Seed the Database:**
-   ```bash
-   python enrich_db.py
-   ```
-
-6. **Start the FastAPI Server:**
-   ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-   ```
-   The backend API will be available at: **`http://localhost:8000`**  
-   Interactive Swagger docs: **`http://localhost:8000/docs`**
-
----
-
-### 3. Frontend Setup
-
-1. **Open a new terminal window and navigate to the frontend directory:**
-   ```bash
-   cd frontend
-   ```
-
-2. **Install frontend dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Launch the development server:**
-   ```bash
-   npm run dev
-   ```
-   The application will launch at: **`http://localhost:5173`**
-
----
-
-## 🧪 CI/CD & Local Verification
-
-AIRA provides a robust, reproducible CI/CD pipeline engineered to verify the complete project deterministically on every pull request and push to `main`.
-
-### 🛡️ Core CI Mandate: Deterministic & Keyless
-
-> **Normal CI does NOT require a live Gemini API key.**
-
-All AI-dependent recovery signal classification and root-cause analysis in normal CI utilize a deterministic mock provider (`MockGeminiProvider`). This guarantees **100% reproducible test outcomes** with zero network latency, zero flakiness, and zero external API dependencies.
-
-A live Gemini test job is supported as an **optional, isolated pipeline job** strictly gated behind the presence of the `GEMINI_API_KEY` repository secret (`secrets.GEMINI_API_KEY != ''`).
-
----
-
-### 🚀 Unified Local CI Runner (`npm run ci`)
-
-You can execute the exact equivalent of the full GitHub Actions CI pipeline locally with a single command from the repository root:
-
+Run the complete offline CI suite from the repository root:
 ```bash
 npm run ci
 ```
 
-This sequentially executes all verification stages in offline mode:
-
-1. **Frontend Lint**: `npm --prefix frontend run lint` (`oxlint`)
-2. **Frontend Typecheck**: `npm --prefix frontend run typecheck` (`tsc -b`)
-3. **Unit & Contract Tests**:
-   - Backend contract & unit suite (`pytest` with deterministic mock Gemini)
-   - Frontend state machine & flow verification (`tsx verify_flows.ts`)
-4. **Dataset Validation**:
-   - Backend SQLite database schema & constraint validation (`validate_datasets.py`)
-   - Frontend in-memory seed dataset validation (`validate_datasets.ts`)
-5. **Backend Startup Verification**:
-   - Starts FastAPI application, verifies lifespan initialization, asserts `/health` HTTP 200, checks `/api/metrics`, and terminates cleanly (`verify_backend.py`)
-6. **Production Frontend Build**: `npm --prefix frontend run build` (`vite build`)
-
----
-
-### 📋 Individual Verification Commands
-
-From the project root:
-
-| Command | Description | Environment |
-|---------|-------------|-------------|
-| `npm run ci` | Runs complete 6-stage CI verification locally | `AI_PROVIDER=mock` (Offline) |
-| `npm run lint` | Runs frontend code quality checks via `oxlint` | Local / CI |
-| `npm run typecheck` | Validates TypeScript types across frontend | Local / CI |
-| `npm test` | Runs both backend pytest and frontend verification tests | Offline / Keyless |
-| `npm run test:gemini` | Runs live Gemini contract tests (skips if key absent) | Requires `GEMINI_API_KEY` |
-| `npm run validate:dataset` | Validates backend SQLite DB and frontend seed datasets | Local / CI |
-| `npm run verify:backend` | Boots backend, probes `/health` & `/api/metrics`, exits | Local / CI |
-| `npm run build` | Compiles production-ready frontend bundle | Local / CI |
-
----
-
-### 🤖 Live Gemini Integration Testing
-
-To run live integration tests against Google Gemini:
-
+To run live integration tests with Gemini (requires `GEMINI_API_KEY`):
 ```bash
-# Set your API key
-export GEMINI_API_KEY="your-actual-api-key"
-export AI_PROVIDER="gemini"
-
-# Run dedicated live Gemini test suite
 npm run test:gemini
 ```
-
-If `GEMINI_API_KEY` is not present, the live test cleanly skips without failing.
-
-## 📜 Indian Financial & Regulatory Compliance
-
-AIRA is built around strict compliance with Indian financial regulations:
-
-* **RBI Circular on Recurring Transactions (RBI/2020-21/74)**:
-  * Strict adherence to pre-debit notifications (minimum 24 hours prior).
-  * Enforcement of statutory 24-hour cooldown periods between automated retries.
-* **NPCI Procedural Guidelines for UPI Autopay**:
-  * Unified error code normalization across bank remitter and beneficiary codes.
-* **DPDP Act (Digital Personal Data Protection)**:
-  * Sensitive customer banking identifiers and cards are masked at the API boundary.
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License**. See the `LICENSE` file for details.
-
----
-
-<p align="center">
-  Built with ❤️ for the Indian Fintech Ecosystem • Powered by <b>AIRA</b>
-</p>
