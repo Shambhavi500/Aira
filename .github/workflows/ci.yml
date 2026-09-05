@@ -11,21 +11,32 @@
 #
 # Normal CI (job: ci)
 #   Never requires GEMINI_API_KEY. Uses AI_PROVIDER=mock throughout.
-#   Runs on every push and pull_request.
+#   Runs on every push, pull_request, and workflow_dispatch.
 #
 # Optional Live Gemini Tests (job: live-gemini-tests)
-#   Requires the GEMINI_API_KEY GitHub repository secret.
-#   Skipped automatically on PRs from forks (secrets unavailable).
-#   Only runs after the main CI job succeeds.
+#   Only eligible when explicitly requested via workflow_dispatch input.
+#   A step inside the job checks whether GEMINI_API_KEY is configured;
+#   the test step is skipped if the secret is absent.
+#   NEVER uses secrets in a job-level if: expression (unsupported by GitHub).
 # ==============================================================================
 
 name: AIRA CI
 
 on:
   push:
-    branches: ["**"]
+    branches: ["main"]
   pull_request:
-    branches: ["**"]
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      run_live_gemini:
+        description: "Run live Gemini integration tests (requires GEMINI_API_KEY secret)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -39,7 +50,7 @@ permissions:
 # ---------------------------------------------------------------------------
 jobs:
   ci:
-    name: CI — Lint · Typecheck · Tests · Datasets · Backend · Build
+    name: CI - Lint, Typecheck, Tests, Datasets, Backend, Build
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -52,11 +63,11 @@ jobs:
       VITE_API_BASE_URL: "http://localhost:8000"
 
     steps:
-      # ── Checkout ──────────────────────────────────────────────────────────
+      # Checkout
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── Runtime setup ─────────────────────────────────────────────────────
+      # Runtime setup
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
@@ -71,7 +82,7 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
 
-      # ── Dependency installation ───────────────────────────────────────────
+      # Dependency installation
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
@@ -82,64 +93,72 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ── Lint ─────────────────────────────────────────────────────────────
-      - name: Lint — frontend (oxlint)
+      # Lint
+      - name: Lint - frontend (oxlint)
         working-directory: frontend
         run: npm run lint
 
-      - name: Lint — backend Python syntax check (compileall)
+      - name: Lint - backend Python syntax check (compileall)
         run: python -m compileall -q backend/app backend/tests backend/scripts
 
-      # ── Type checking ─────────────────────────────────────────────────────
-      - name: Typecheck — frontend TypeScript (tsc -b)
+      # Type checking
+      - name: Typecheck - frontend TypeScript (tsc -b)
         working-directory: frontend
         run: npm run typecheck
 
-      # ── Tests ─────────────────────────────────────────────────────────────
-      - name: Test — backend (pytest, AI_PROVIDER=mock, no Gemini key)
+      # Tests
+      - name: Test - backend (pytest, AI_PROVIDER=mock, no Gemini key)
         working-directory: backend
         env:
           PYTHONPATH: .
         run: pytest -v
 
-      - name: Test — frontend flow and state verification (tsx verify_flows.ts)
+      - name: Test - frontend flow and state verification (tsx verify_flows.ts)
         working-directory: frontend
         run: npm test
 
-      # ── Dataset validation ────────────────────────────────────────────────
-      - name: Validate datasets — backend SQLite schema and integrity
+      # Dataset validation
+      - name: Validate datasets - backend SQLite schema and integrity
         working-directory: backend
         env:
           PYTHONPATH: .
         run: python scripts/validate_datasets.py
 
-      - name: Validate datasets — frontend in-memory seed data (TypeScript)
+      - name: Validate datasets - frontend in-memory seed data (TypeScript)
         working-directory: frontend
         run: npm run validate:dataset
 
-      # ── Backend smoke verification ────────────────────────────────────────
-      - name: Verify backend — startup and endpoint smoke test
+      # Backend smoke verification
+      - name: Verify backend - startup and endpoint smoke test
         working-directory: backend
         env:
           PYTHONPATH: .
         run: python scripts/verify_backend.py
 
-      # ── Frontend production build ─────────────────────────────────────────
-      - name: Build — frontend production bundle (tsc -b and vite build)
+      # Frontend production build
+      - name: Build - frontend production bundle (tsc -b and vite build)
         working-directory: frontend
         run: npm run build
 
 # ---------------------------------------------------------------------------
-# Optional Live Gemini Job — only runs when GEMINI_API_KEY secret is present
+# Optional Live Gemini Job
+#
+# Gating strategy (avoids the unsupported "secrets" job-level if expression):
+#   1. Job only runs when workflow_dispatch is used AND run_live_gemini=true.
+#   2. A dedicated step checks whether GEMINI_API_KEY is non-empty via env.
+#   3. The test step is conditioned on that step's output.
+#   4. The secret is never printed, echoed, or exposed.
 # ---------------------------------------------------------------------------
   live-gemini-tests:
-    name: Optional — Live Gemini Integration Tests
+    name: Optional - Live Gemini Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [ci]
+    # Gate 1: Only eligible on explicit manual dispatch with opt-in input.
+    # This is the only job-level condition — no secrets context used here.
     if: >-
-      github.event_name != 'pull_request' &&
-      secrets.GEMINI_API_KEY != ''
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.run_live_gemini == 'true'
 
     steps:
       - name: Checkout repository
@@ -158,11 +177,36 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # Gate 2: Check secret availability via env var (step-level, supported).
+      # Sets an output flag that the test step reads.
+      # The secret value is never printed or logged.
+      - name: Check GEMINI_API_KEY secret availability
+        id: check_key
+        env:
+          KEY_PRESENT: ${{ secrets.GEMINI_API_KEY != '' }}
+        run: |
+          if [ "$KEY_PRESENT" = "true" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "GEMINI_API_KEY secret is configured. Live tests will run."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "GEMINI_API_KEY secret is not configured. Live tests will be skipped."
+          fi
+
       - name: Run live Gemini integration tests
+        if: steps.check_key.outputs.available == 'true'
         working-directory: backend
         env:
           AI_PROVIDER: gemini
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ENVIRONMENT: testing
           PYTHONPATH: .
+        # Only execute tests marked @pytest.mark.live_gemini
         run: pytest -v -m live_gemini
+
+      - name: Skip notice - GEMINI_API_KEY not configured
+        if: steps.check_key.outputs.available != 'true'
+        run: |
+          echo "Live Gemini tests were requested but GEMINI_API_KEY secret is not set."
+          echo "Configure the secret in Settings > Secrets and variables > Actions."
+          echo "Normal CI is not affected."
